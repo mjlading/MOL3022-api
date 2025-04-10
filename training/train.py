@@ -27,7 +27,6 @@ data_path = "data/513_distribute"
 for fname in os.listdir(data_path):
     with open(os.path.join(data_path, fname)) as f:
         lines = f.readlines()
-    # Read and pad residue sequence
     r_seq = [r for r in lines[0].split(":")[1].strip().split(",") if r]
     r_seq = ["X"] * HW + r_seq + ["X"] * HW
     r_enc = [res_to_idx[r] for r in r_seq]
@@ -55,6 +54,10 @@ model = CNNModel(num_residues=len(residues), embedding_dim=50).to(device)
 optimizer = Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 scheduler = CosineAnnealingLR(optimizer, T_max=200)
 criterion = nn.CrossEntropyLoss()
+
+# Track training
+train_losses, val_losses = []
+train_accuracies, val_accuracies = []
 
 # Training loop with early stopping
 best_loss, patience, ctr = float('inf'), 20, 0
@@ -87,6 +90,13 @@ for epoch in range(200):
             correct_val += (preds == targets).sum().item()
             total_val += targets.size(0)
     val_loss, val_acc = loss_val / len(val_loader), correct_val / total_val * 100
+
+    # Track progress
+    train_losses.append(train_loss)
+    val_losses.append(val_loss)
+    train_accuracies.append(train_acc)
+    val_accuracies.append(val_acc)
+
     print(f"Epoch {epoch+1}/200 - Train: {train_loss:.4f}, {train_acc:.2f}% | Val: {val_loss:.4f}, {val_acc:.2f}%")
 
     if val_loss < best_loss:
@@ -96,6 +106,27 @@ for epoch in range(200):
         print("Early stopping.")
         break
     scheduler.step()
+
+# Plot training curves
+plt.figure()
+plt.plot(train_losses, label='Train Loss')
+plt.plot(val_losses, label='Val Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Training vs Validation Loss')
+plt.legend()
+plt.tight_layout()
+plt.savefig("loss_curve.png")
+
+plt.figure()
+plt.plot(train_accuracies, label='Train Accuracy')
+plt.plot(val_accuracies, label='Val Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy (%)')
+plt.title('Training vs Validation Accuracy')
+plt.legend()
+plt.tight_layout()
+plt.savefig("accuracy_curve.png")
 
 # Evaluation and ROC Curve
 model.load_state_dict(torch.load("best_model.pt"))
