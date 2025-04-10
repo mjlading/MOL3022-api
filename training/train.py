@@ -56,8 +56,8 @@ scheduler = CosineAnnealingLR(optimizer, T_max=200)
 criterion = nn.CrossEntropyLoss()
 
 # Track training
-train_losses, val_losses = []
-train_accuracies, val_accuracies = []
+train_losses, val_losses = [], []
+train_accuracies, val_accuracies = [], []
 
 # Training loop with early stopping
 best_loss, patience, ctr = float('inf'), 20, 0
